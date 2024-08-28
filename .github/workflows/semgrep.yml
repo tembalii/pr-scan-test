@@ -41,6 +41,10 @@ jobs:
           repository: tembalii/rule-reg
           path: rules
 
+      # List files in the rules directory for debugging.
+      - name: List rules directory
+        run: ls -R rules
+
       # Set up Python.
       - name: Set up Python
         uses: actions/setup-python@v2
