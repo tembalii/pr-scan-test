@@ -16,3 +16,4 @@ def direct_response(input: str):
 
     # deepruleid: sqlalchemy-fastapi-relationship
     Parent.children = relationship(Child, foreign_keys=f"Parent.id == {tainted}")
+    print("kk")
