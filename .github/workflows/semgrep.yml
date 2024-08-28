@@ -1,50 +1,47 @@
 # Name of this GitHub Actions workflow.
-name: Semgrep CI
+name: Semgrep Scan
 
 on:
-  # Trigger scanning for pull requests to main branch.
+  # Scan changed files in PRs (diff-aware scanning):
   pull_request:
     branches:
       - main
-  # Allow manual triggering of the workflow.
+  # Scan on-demand through GitHub Actions interface:
   workflow_dispatch: {}
-  # Scan mainline branches if changes are made to the workflow configuration file.
+  # Scan mainline branches if there are changes to .github/workflows/semgrep.yml:
   push:
     branches:
       - main
       - master
     paths:
       - .github/workflows/semgrep.yml
-  # Schedule daily scans at 17:20 UTC.
+  # Schedule the CI job (this method uses cron syntax):
   schedule:
-    - cron: '20 17 * * *'
+    - cron: '20 17 * * *' # Sets Semgrep to scan every day at 17:20 UTC.
+    # It is recommended to change the schedule to a random time.
 
 jobs:
   semgrep:
     # User definable name of this GitHub Actions job.
     name: semgrep/ci
+    # If you are self-hosting, change the following `runs-on` value:
     runs-on: ubuntu-latest
-    # container:
-    #   image: semgrep/semgrep
-      
-    # Skip any PR created by dependabot to avoid permission issues:
-    if: (github.actor != 'dependabot[bot]')
 
     steps:
-      # Fetch the project source.
+      # Checkout project source with GitHub Actions Checkout.
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Ensure the full history is fetched for diff-aware scanning
 
-      # Checkout rules from a specific repository.
+      # Checkout rules from another repository.
       - name: Checkout rules
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: tembalii/rule-reg
           path: rules
 
-      # Set up Python environment.
+      # Set up Python.
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -54,8 +51,26 @@ jobs:
       - name: Install Semgrep
         run: pip install semgrep
 
-      # Run Semgrep CI with the specified rules configuration.
-      - name: Run Semgrep CI
-        run: semgrep ci --config=rules/rule1.yaml
+      # Get the list of changed files.
+      - name: Get changed files
+        id: changed-files
+        run: |
+          git fetch origin main
+          git diff --name-only origin/main...HEAD > changed_files.txt
+
+      # Run Semgrep scan on changed files.
+      - name: Run Semgrep Scan
+        run: |
+          if [ -s changed_files.txt ]; then
+            semgrep scan --config=rules/rule1.yaml $(cat changed_files.txt)
+          else
+            echo "No changed files to scan."
+          fi
         env:
+          # Connect to Semgrep AppSec Platform through your SEMGREP_APP_TOKEN.
+          # Generate a token from Semgrep AppSec Platform > Settings
+          # and add it to your GitHub secrets.
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+    # Skip any PR created by dependabot to avoid permission issues:
+    if: github.actor != 'dependabot[bot]'
