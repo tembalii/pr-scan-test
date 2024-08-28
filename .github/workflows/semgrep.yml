@@ -32,6 +32,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          path: main
           fetch-depth: 0  # Ensure the full history is fetched for diff-aware scanning
 
       # Checkout rules from another repository.
